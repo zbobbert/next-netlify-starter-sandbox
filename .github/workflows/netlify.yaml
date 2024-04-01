@@ -1,0 +1,33 @@
+name: Netlify Github workflow sandbox
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened, synchronize, closed]
+
+env:
+  GITHUB_ENVIRONMENT_NAME: PR_${{ github.event.pull_request.number }}
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  netlify:
+    if: github.event_name == 'pull_request' && contains(fromJSON('["opened", "ready_for_review", "reopened"]'), github.event.action)
+    runs-on: ubuntu-latest
+    environment: PR_${{ github.event.pull_request.number }}
+    steps:
+      - name: Add current branch to Netlify 🌲
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          ALLOWED_BRANCHES=$(netlify api getSite --data '{ "site_id": "${NETLIFY_SITE_ID}" }' | jq '.build_settings.allowed_branches')
+          echo "Allowed Branches: ${ALLOWED_BRANCHES}"
+
+          if [ $(jq '.[]|select(index("$BRANCH_NAME"))' <<< "$ALLOWED_BRANCHES") ]; then
+            echo "Adding ${BRANCH_NAME} to Netlify allowed_branches"
+            UPDATED_ALLOWED_BRANCHES=$(jq '.[] |= .+ "$BRANCH_NAME' <<< "$ALLOWED_BRANCHES")
+            echo "Updated Allowed Branches: ${UPDATED_ALLOWED_BRANCHES}"
+          fi
