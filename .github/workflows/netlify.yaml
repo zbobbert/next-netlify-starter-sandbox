@@ -71,11 +71,14 @@ jobs:
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
         GET_ENV_DATA=$(jq -n \
+                          --arg account_id "$NETLIFY_ACCOUNT_ID" \
                           --arg site_id "$NETLIFY_SITE_ID" \
-                          '{ $site_id, context_name: "branch-deploy" }')
-        NETLIFY_ENV_VARS=$(netlify api getSiteEnvVars --data "${GET_ENV_DATA}")
-
+                          '{ $account_id, $site_id, context_name: "branch" }')
+        NETLIFY_ENV_VARS=$(netlify api getEnvVars --data "${GET_ENV_DATA}")
         echo "NETLIFY_ENV_VARS: $NETLIFY_ENV_VARS"
+
+        VAR_IDS_TO_DELETE=$(jq --arg bn "$BRANCH_NAME" '.[].values[] | select(.context_parameter=="$bn") | .id')
+        echo "VAR_IDS_TO_DELETE: $VAR_IDS_TO_DELETE"
 
         # DELETE_ENV_DATA=$(jq -n \
         #                       --arg account_id "$NETLIFY_ACCOUNT_ID" \
