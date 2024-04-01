@@ -17,23 +17,36 @@ jobs:
     runs-on: ubuntu-latest
     environment: PR_${{ github.event.pull_request.number }}
     steps:
-    - name: Get allowed branches
-      id: get-netlify-branches
-      uses: netlify/actions/cli@master
+    - name: Checkout 🛎️
+      uses: actions/checkout@v4
+
+    - name: Setup Node LTS ⚙️
+      uses: actions/setup-node@v4
       with:
-        args: "api getSite --data '{ \"site_id\": \"${{ secrets.NETLIFY_SITE_ID }}\" }'"
-      env:
-        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        node-version: lts/*
+        cache: npm
+
+    - name: Cache node modules 🗃️
+      uses: actions/cache@v4
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Installing dependencies 📦️
+      run: |
+        npm install
 
     - name: Add current branch to Netlify 🌲
       env:
-        NETLIFY_SITE_DATA: ${{ steps.get-netlify-branches.outputs.NETLIFY_OUTPUT }}
         BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
-        ALLOWED_BRANCHES=$(jq '.build_settings.allowed_branches' <<< "$NETLIFY_SITE_DATA")
+        NETLIFY_SITE_DATA=$(netlify api getSite --data '{ "site_id": "${NETLIFY_SITE_ID}" }')
+        echo "Site Data: $NETLIFY_SITE_DATA"
+        ALLOWED_BRANCHES=$(jq '.build_settings.allowed_branches' <<< $NETLIFY_SITE_DATA)
         echo "Allowed Branches: ${ALLOWED_BRANCHES}"
 
         if [ $(jq '.[]|select(index("$BRANCH_NAME"))' <<< "$ALLOWED_BRANCHES") ]; then
