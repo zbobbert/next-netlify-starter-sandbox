@@ -17,15 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: PR_${{ github.event.pull_request.number }}
     steps:
-    - name: Get allowed branches
-      id: get-netlify-branches
-      uses: netlify/actions/cli@master
-      with:
-        args: "api getSite --data '{ \"site_id\": \"${{ secrets.NETLIFY_SITE_ID }}\" }'"
-      env:
-        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-
     - name: Add current branch to Netlify 🌲
       env:
         NETLIFY_SITE_DATA: ${{ steps.get-netlify-branches.outputs.NETLIFY_OUTPUT }}
