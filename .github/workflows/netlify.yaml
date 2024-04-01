@@ -51,4 +51,5 @@ jobs:
                           --arg bn "$BRANCH_NAME" \
                           --arg value "neato" \
                           '{ account_id: $account_id, key: "test_env_var", site_id: $site_id, body: { context: "branch", context_parameter: $bn, value: $value } }')
-        netlify api setEnvVarValue --data ${SET_ENV_DATA}
+        echo "SET_ENV_DATA: ${SET_ENV_DATA}"
+        netlify api setEnvVarValue --data "${SET_ENV_DATA}"
