@@ -26,7 +26,7 @@ jobs:
       run: |
         GET_SITE_DATA="{ \"site_id\": \"${NETLIFY_SITE_ID}\" }"
         echo "Get Site Data: $GET_SITE_DATA"
-        NETLIFY_SITE_DATA=$(netlify api getSite --data $GET_SITE_DATA)
+        NETLIFY_SITE_DATA=$(netlify api getSite --data "$GET_SITE_DATA")
         echo "Site Data: $NETLIFY_SITE_DATA"
         ALLOWED_BRANCHES=$(jq '.build_settings.allowed_branches' <<< $NETLIFY_SITE_DATA)
         echo "Allowed Branches: ${ALLOWED_BRANCHES}"
