@@ -24,6 +24,7 @@ jobs:
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
         NETLIFY_SITE_DATA=$(netlify api getSite --data "{ \"site_id\": \"${NETLIFY_SITE_ID}\" }")
+        echo "NETLIFY_ACCOUNT_ID=$(jq '.account_id' <<< ${NETLIFY_SITE_DATA})" >> $GITHUB_ENV
         ALLOWED_BRANCHES=$(jq '.build_settings.allowed_branches' <<< ${NETLIFY_SITE_DATA})
         echo "Allowed Branches: ${ALLOWED_BRANCHES}"
 
@@ -40,7 +41,8 @@ jobs:
     - name: Add branch env var to Netlify 📎
       env:
         BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        NETLIFY_ACCOUNT_ID: ${{ env.NETLIFY_ACCOUNT_ID }}
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
-        netlify api setEnvVarValue --data "{ \"key\": \"test_env_var\", \"site_id\": \"${NETLIFY_SITE_ID}\", \"body\": { \"context\": \"branch\", \"context_parameter\": \"${BRANCH_NAME}\", \"value\": \"neato\" } }"
+        netlify api setEnvVarValue --data "{ \"account_id\": \"${NETLIFY_ACCOUNT_ID}\", \"key\": \"test_env_var\", \"site_id\": \"${NETLIFY_SITE_ID}\", \"body\": { \"context\": \"branch\", \"context_parameter\": \"${BRANCH_NAME}\", \"value\": \"neato\" } }"
