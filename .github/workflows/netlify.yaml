@@ -72,7 +72,7 @@ jobs:
       run: |
         GET_ENV_DATA=$(jq -n \
                           --arg site_id "$NETLIFY_SITE_ID" \
-                          '{ $site_id, context_name: "branch-deploy" }'
+                          '{ $site_id, context_name: "branch-deploy" }')
         NETLIFY_ENV_VARS=netlify api getSiteEnvVars --data "${GET_ENV_DATA}"
 
         echo "NETLIFY_ENV_VARS: $NETLIFY_ENV_VARS"
