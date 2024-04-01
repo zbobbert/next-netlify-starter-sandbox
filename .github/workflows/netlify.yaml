@@ -23,17 +23,23 @@ jobs:
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
-        NETLIFY_SITE_DATA=$(netlify api getSite --data "{ \"site_id\": \"${NETLIFY_SITE_ID}\" }")
-        echo "NETLIFY_ACCOUNT_ID=$(jq '.account_id' <<< ${NETLIFY_SITE_DATA})" >> $GITHUB_ENV
-        ALLOWED_BRANCHES=$(jq '.build_settings.allowed_branches' <<< ${NETLIFY_SITE_DATA})
+        GET_SITE_DATA=$(jq -n \
+                          --arg site_id "$NETLIFY_SITE_ID" \
+                          '{ site_id: $site_id } }'
+        NETLIFY_SITE_CONFIG=$(netlify api getSite --data "${GET_SITE_DATA}")
+        echo "NETLIFY_ACCOUNT_ID=$(jq '.account_id' <<< ${NETLIFY_SITE_CONFIG})" >> $GITHUB_ENV
+        ALLOWED_BRANCHES=$(jq '.build_settings.allowed_branches' <<< ${NETLIFY_SITE_CONFIG})
         echo "Allowed Branches: ${ALLOWED_BRANCHES}"
 
         if [ ! $(jq '.[]|select(index("${BRANCH_NAME}"))' <<< "${ALLOWED_BRANCHES}") = "${BRANCH_NAME}" ]; then
           echo "Adding ${BRANCH_NAME} to Netlify allowed_branches"
           UPDATED_ALLOWED_BRANCHES=$(jq -c ".[. | length] |= .+ \"${BRANCH_NAME}\"" <<< "${ALLOWED_BRANCHES}")
           echo "Updated Allowed Branches: ${UPDATED_ALLOWED_BRANCHES}"
-          UPDATE_SITE_DATA="{ \"site_id\": \"${NETLIFY_SITE_ID}\", \"body\": { \"build_settings\": { \"allowed_branches\": ${UPDATED_ALLOWED_BRANCHES} } } }"
-          netlify api updateSite --data "${UPDATE_SITE_DATA}"
+          UPDATE_SITE_DATA=$(jq -n \
+                                --arg site_id "$NETLIFY_SITE_ID" \
+                                --arg uab "$UPDATED_ALLOWED_BRANCHES" \
+                                '{ site_id: $site_id, body: { build_settings: { allowed_branches: $uab } } }'
+          UPDATED_SITE_CONFIG=netlify api updateSite --data "${UPDATE_SITE_DATA}"
         else
           echo "${BRANCH_NAME} is already in Netlify allowed_branches"
         fi
@@ -50,6 +56,5 @@ jobs:
                           --arg site_id "$NETLIFY_SITE_ID" \
                           --arg bn "$BRANCH_NAME" \
                           --arg value "neato" \
-                          '{ account_id: $account_id, key: "test_env_var", site_id: $site_id, body: { context: "branch", context_parameter: $bn, value: $value } }')
-        echo "SET_ENV_DATA: ${SET_ENV_DATA}"
+                          '{ $account_id, key: "test_env_var", $site_id, body: { context: "branch", context_parameter: $bn, $value } }')
         netlify api setEnvVarValue --data "${SET_ENV_DATA}"
