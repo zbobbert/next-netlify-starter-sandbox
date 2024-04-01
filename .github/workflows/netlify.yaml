@@ -25,7 +25,7 @@ jobs:
       run: |
         GET_SITE_DATA=$(jq -n \
                           --arg site_id "$NETLIFY_SITE_ID" \
-                          '{ site_id: $site_id } }'
+                          '{ site_id: $site_id } }')
         NETLIFY_SITE_CONFIG=$(netlify api getSite --data "${GET_SITE_DATA}")
         echo "NETLIFY_ACCOUNT_ID=$(jq '.account_id' <<< ${NETLIFY_SITE_CONFIG})" >> $GITHUB_ENV
         ALLOWED_BRANCHES=$(jq '.build_settings.allowed_branches' <<< ${NETLIFY_SITE_CONFIG})
@@ -38,7 +38,7 @@ jobs:
           UPDATE_SITE_DATA=$(jq -n \
                                 --arg site_id "$NETLIFY_SITE_ID" \
                                 --arg uab "$UPDATED_ALLOWED_BRANCHES" \
-                                '{ site_id: $site_id, body: { build_settings: { allowed_branches: $uab } } }'
+                                '{ site_id: $site_id, body: { build_settings: { allowed_branches: $uab } } }')
           UPDATED_SITE_CONFIG=netlify api updateSite --data "${UPDATE_SITE_DATA}"
         else
           echo "${BRANCH_NAME} is already in Netlify allowed_branches"
