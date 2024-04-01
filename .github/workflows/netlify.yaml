@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   netlify:
-    if: github.event_name == 'pull_request' && contains(fromJSON('["opened", "ready_for_review", "reopened", "synchronize"]'), github.event.action)
+    if: github.event_name == 'pull_request' && contains(fromJSON('["opened", "ready_for_review", "reopened"]'), github.event.action)
     runs-on: ubuntu-latest
     environment: PR_${{ github.event.pull_request.number }}
     steps:
@@ -25,7 +25,7 @@ jobs:
       run: |
         GET_SITE_DATA=$(jq -n \
                           --arg site_id "$NETLIFY_SITE_ID" \
-                          '{ site_id: $site_id }')
+                          '{ $site_id }')
         NETLIFY_SITE_CONFIG=$(netlify api getSite --data "${GET_SITE_DATA}")
         echo "NETLIFY_ACCOUNT_ID=$(jq '.account_id' <<< ${NETLIFY_SITE_CONFIG})" >> $GITHUB_ENV
         ALLOWED_BRANCHES=$(jq '.build_settings.allowed_branches' <<< ${NETLIFY_SITE_CONFIG})
@@ -38,7 +38,7 @@ jobs:
           UPDATE_SITE_DATA=$(jq -n \
                                 --arg site_id "$NETLIFY_SITE_ID" \
                                 --arg uab "$UPDATED_ALLOWED_BRANCHES" \
-                                '{ site_id: $site_id, body: { build_settings: { allowed_branches: $uab } } }')
+                                '{ $site_id, body: { build_settings: { allowed_branches: $uab } } }')
           UPDATED_SITE_CONFIG=netlify api updateSite --data "${UPDATE_SITE_DATA}"
         else
           echo "${BRANCH_NAME} is already in Netlify allowed_branches"
@@ -58,3 +58,27 @@ jobs:
                           --arg value "neato" \
                           '{ $account_id, key: "test_env_var", $site_id, body: { context: "branch", context_parameter: $bn, $value } }')
         netlify api setEnvVarValue --data "${SET_ENV_DATA}"
+
+  cleanup:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Delete branch env vars from Netlify 🗑
+      env:
+        BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        NETLIFY_ACCOUNT_ID: ${{ env.NETLIFY_ACCOUNT_ID }}
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      run: |
+        GET_ENV_DATA=$(jq -n \
+                          --arg site_id "$NETLIFY_SITE_ID" \
+                          '{ $site_id, context_name: "branch-deploy" }'
+        NETLIFY_ENV_VARS=netlify api getSiteEnvVars --data "${GET_ENV_DATA}"
+
+        echo "NETLIFY_ENV_VARS: $NETLIFY_ENV_VARS"
+
+        # DELETE_ENV_DATA=$(jq -n \
+        #                       --arg account_id "$NETLIFY_ACCOUNT_ID" \
+        #                       --arg value "neato" \
+        #                       '{ $account_id, key: "test_env_var", $site_id, body: { context: "branch", context_parameter: $bn, $value } }')
+        # netlify api deleteEnvVarValue --data "${DELETE_ENV_DATA}"
