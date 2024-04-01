@@ -33,7 +33,7 @@ jobs:
           echo "Adding ${BRANCH_NAME} to Netlify allowed_branches"
           UPDATED_ALLOWED_BRANCHES=$(jq -c ".[. | length] |= .+ \"$BRANCH_NAME\"" <<< "$ALLOWED_BRANCHES")
           echo "Updated Allowed Branches: ${UPDATED_ALLOWED_BRANCHES}"
-          UPDATE_SITE_DATA="{ \"site_id\": \"${NETLIFY_SITE_ID}\", \"body\": { \"build_settings\": { \"allowed_branches\": \"${UPDATED_ALLOWED_BRANCHES}\" } } }"
+          UPDATE_SITE_DATA="{ \"site_id\": \"${NETLIFY_SITE_ID}\", \"body\": { \"build_settings\": { \"allowed_branches\": ${UPDATED_ALLOWED_BRANCHES} } } }"
           echo "UPDATE_SITE_DATA: ${UPDATE_SITE_DATA}"
           netlify api updateSite --data "$UPDATE_SITE_DATA"
         else
