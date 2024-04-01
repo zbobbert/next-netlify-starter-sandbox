@@ -45,4 +45,5 @@ jobs:
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
-        netlify api setEnvVarValue --data "{ \"account_id\": \"${NETLIFY_ACCOUNT_ID}\", \"key\": \"test_env_var\", \"site_id\": \"${NETLIFY_SITE_ID}\", \"body\": { \"context\": \"branch\", \"context_parameter\": \"${BRANCH_NAME}\", \"value\": \"neato\" } }"
+        SET_ENV_DATA=$(jq -n --arg account_id "$NETLIFY_ACCOUNT_ID" --arg site_id "$NETLIFY_SITE_ID" --arg bn "$BRANCH_NAME" '{ account_id: $account_id, key: test_env_var, site_id: $site_id, body: { context: branch, context_parameter: $bn, value: neato } }')
+        netlify api setEnvVarValue --data ${SET_ENV_DATA}
