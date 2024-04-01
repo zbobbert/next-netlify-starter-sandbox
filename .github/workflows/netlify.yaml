@@ -19,7 +19,6 @@ jobs:
     steps:
     - name: Add current branch to Netlify 🌲
       env:
-        NETLIFY_SITE_DATA: ${{ steps.get-netlify-branches.outputs.NETLIFY_OUTPUT }}
         BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
@@ -37,3 +36,11 @@ jobs:
         else
           echo "${BRANCH_NAME} is already in Netlify allowed_branches"
         fi
+
+    - name: Add branch env var to Netlify 📎
+      env:
+        BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      run: |
+        netlify api setEnvVarValue --data "{ \"key\": \"test_env_var\" \"site_id\": \"${NETLIFY_SITE_ID}\" \"body\": { \"context\": \"branch\", \"context_parameter\": \"${BRANCH_NAME}\", \"value\": \"neato\" } }"
