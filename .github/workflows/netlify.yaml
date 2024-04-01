@@ -25,15 +25,15 @@ jobs:
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
         NETLIFY_SITE_DATA=$(netlify api getSite --data "{ \"site_id\": \"${NETLIFY_SITE_ID}\" }")
-        ALLOWED_BRANCHES=$(jq '.build_settings.allowed_branches' <<< $NETLIFY_SITE_DATA)
+        ALLOWED_BRANCHES=$(jq '.build_settings.allowed_branches' <<< ${NETLIFY_SITE_DATA})
         echo "Allowed Branches: ${ALLOWED_BRANCHES}"
 
-        if [ ! $(jq '.[]|select(index("$BRANCH_NAME"))' <<< "$ALLOWED_BRANCHES") ]; then
+        if [ ! $(jq '.[]|select(index("${BRANCH_NAME}"))' <<< "${ALLOWED_BRANCHES}") = "${BRANCH_NAME}" ]; then
           echo "Adding ${BRANCH_NAME} to Netlify allowed_branches"
-          UPDATED_ALLOWED_BRANCHES=$(jq -c ".[. | length] |= .+ \"$BRANCH_NAME\"" <<< "$ALLOWED_BRANCHES")
+          UPDATED_ALLOWED_BRANCHES=$(jq -c ".[. | length] |= .+ \"${BRANCH_NAME}\"" <<< "${ALLOWED_BRANCHES}")
           echo "Updated Allowed Branches: ${UPDATED_ALLOWED_BRANCHES}"
           UPDATE_SITE_DATA="{ \"site_id\": \"${NETLIFY_SITE_ID}\", \"body\": { \"build_settings\": { \"allowed_branches\": ${UPDATED_ALLOWED_BRANCHES} } } }"
-          netlify api updateSite --data "$UPDATE_SITE_DATA"
+          netlify api updateSite --data "${UPDATE_SITE_DATA}"
         else
           echo "${BRANCH_NAME} is already in Netlify allowed_branches"
         fi
