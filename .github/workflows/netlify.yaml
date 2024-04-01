@@ -43,4 +43,4 @@ jobs:
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
-        netlify api setEnvVarValue --data "{ \"key\": \"test_env_var\" \"site_id\": \"${NETLIFY_SITE_ID}\" \"body\": { \"context\": \"branch\", \"context_parameter\": \"${BRANCH_NAME}\", \"value\": \"neato\" } }"
+        netlify api setEnvVarValue --data "{ \"key\": \"test_env_var\", \"site_id\": \"${NETLIFY_SITE_ID}\", \"body\": { \"context\": \"branch\", \"context_parameter\": \"${BRANCH_NAME}\", \"value\": \"neato\" } }"
