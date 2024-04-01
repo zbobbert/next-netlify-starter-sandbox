@@ -31,6 +31,6 @@ jobs:
 
         if [ ! $(jq '.[]|select(index("$BRANCH_NAME"))' <<< "$ALLOWED_BRANCHES") ]; then
           echo "Adding ${BRANCH_NAME} to Netlify allowed_branches"
-          UPDATED_ALLOWED_BRANCHES=$(jq '.[] |= .+ "$BRANCH_NAME' <<< "$ALLOWED_BRANCHES")
+          UPDATED_ALLOWED_BRANCHES=$(jq '.[] |= .+ "$BRANCH_NAME" <<< "$ALLOWED_BRANCHES")
           echo "Updated Allowed Branches: ${UPDATED_ALLOWED_BRANCHES}"
         fi
