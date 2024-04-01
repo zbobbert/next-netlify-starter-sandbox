@@ -76,7 +76,7 @@ jobs:
         NETLIFY_ENV_VARS=$(netlify api getEnvVars --data "${GET_ENV_DATA}")
         echo "NETLIFY_ENV_VARS: $NETLIFY_ENV_VARS"
 
-        VAR_IDS_TO_DELETE=$(jq --arg bn "$BRANCH_NAME" '.[].values[] | select(.context_parameter=="$bn") | .id')
+        VAR_IDS_TO_DELETE=$(jq --arg bn "$BRANCH_NAME" '.[].values[] | select(.context_parameter==$bn) | .id')
         echo "VAR_IDS_TO_DELETE: $VAR_IDS_TO_DELETE"
 
         # DELETE_ENV_DATA=$(jq -n \
