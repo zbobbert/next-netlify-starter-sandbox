@@ -27,7 +27,6 @@ jobs:
                           --arg site_id "$NETLIFY_SITE_ID" \
                           '{ $site_id }')
         NETLIFY_SITE_CONFIG=$(netlify api getSite --data "${GET_SITE_DATA}")
-        echo "NETLIFY_ACCOUNT_ID=$(jq '.account_id' <<< ${NETLIFY_SITE_CONFIG})" >> $GITHUB_ENV
         ALLOWED_BRANCHES=$(jq '.build_settings.allowed_branches' <<< ${NETLIFY_SITE_CONFIG})
         echo "Allowed Branches: ${ALLOWED_BRANCHES}"
 
@@ -47,7 +46,7 @@ jobs:
     - name: Add branch env var to Netlify 📎
       env:
         BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-        NETLIFY_ACCOUNT_ID: ${{ env.NETLIFY_ACCOUNT_ID }}
+        NETLIFY_ACCOUNT_ID: ${{ secrets.NETLIFY_ACCOUNT_ID }}
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
