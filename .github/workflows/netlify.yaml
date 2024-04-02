@@ -39,7 +39,7 @@ jobs:
           echo "Updated Allowed Branches: ${UPDATED_ALLOWED_BRANCHES}"
           UPDATE_SITE_DATA=$(jq -n \
             --arg site_id "$NETLIFY_SITE_ID" \
-            --arg uab "$UPDATED_ALLOWED_BRANCHES" \
+            --argjson uab "$UPDATED_ALLOWED_BRANCHES" \
             '{ $site_id, body: { build_settings: { allowed_branches: $uab } } }')
           UPDATED_SITE_CONFIG=$(netlify api updateSite --data "${UPDATE_SITE_DATA}")
         else
@@ -66,7 +66,7 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     steps:
-    - name: Delete branch env vars from Netlify 🗑
+    - name: Delete branch and branch env vars from Netlify 🗑
       env:
         BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
@@ -89,7 +89,7 @@ jobs:
 
         UPDATE_SITE_DATA=$(jq -n \
           --arg site_id "${NETLIFY_SITE_ID}" \
-          --arg pab "${PRUNED_ALLOWED_BRANCHES}" \
+          --argjson pab "${PRUNED_ALLOWED_BRANCHES}" \
           '{ $site_id, body: { build_settings: { allowed_branches: $pab } } }')
         UPDATED_SITE_CONFIG=$(netlify api updateSite --data "${UPDATE_SITE_DATA}")
 
