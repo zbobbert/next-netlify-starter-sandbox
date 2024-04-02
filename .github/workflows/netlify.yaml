@@ -33,7 +33,7 @@ jobs:
         echo "Allowed Branches: ${ALLOWED_BRANCHES}"
 
         # Add the current branch to allowed_branches if it's missing.
-        if [ ! $(jq '.[]|select(index("${BRANCH_NAME}"))' <<< "${ALLOWED_BRANCHES}") = "${BRANCH_NAME}" ]; then
+        if [ ! $(jq --arg bn "$BRANCH_NAME" '.[]|select(index($bn))' <<< "${ALLOWED_BRANCHES}") ]; then
           echo "Adding ${BRANCH_NAME} to Netlify allowed_branches"
           UPDATED_ALLOWED_BRANCHES=$(jq -c ".[. | length] |= .+ \"${BRANCH_NAME}\"" <<< "${ALLOWED_BRANCHES}")
           echo "Updated Allowed Branches: ${UPDATED_ALLOWED_BRANCHES}"
