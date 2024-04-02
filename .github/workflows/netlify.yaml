@@ -57,9 +57,10 @@ jobs:
         SET_ENV_DATA=$(jq -n \
           --arg account_id "$NETLIFY_ACCOUNT_ID" \
           --arg site_id "$NETLIFY_SITE_ID" \
-          --arg bn "$BRANCH_NAME" \
+          --arg context_parameter "$BRANCH_NAME" \
+          --arg key "test_env_var" \
           --arg value "neato" \
-          '{ $account_id, key: "test_env_var", $site_id, body: { context: "branch", context_parameter: $bn, $value } }')
+          '{ $account_id, $key, $site_id, body: { context: "branch", $context_parameter, $value } }')
         UPDATED_ENV_CONFIG=$(netlify api setEnvVarValue --data "${SET_ENV_DATA}")
 
   cleanup:
@@ -108,16 +109,16 @@ jobs:
         echo "VAR_IDS_TO_DELETE: ${VAR_IDS_TO_DELETE}"
 
         # Iterate over those variables and delete them by their id.
-        for var in ${VAR_IDS_TO_DELETE}; do
+        echo "${VAR_IDS_TO_DELETE}" | while read var; do
           VAR_NAME=$(jq '.[0]' <<< $var)
           VAR_ID=$(jq '.[1]' <<< $var)
           echo "Deleting ${VAR_NAME} with id: ${VAR_ID}"
           DELETE_ENV_DATA=$(jq -n \
             --arg account_id "${NETLIFY_ACCOUNT_ID}" \
-            --arg var_id "${VAR_ID}" \
-            --arg var_name "${VAR_NAME}" \
+            --arg id "${VAR_ID}" \
+            --arg key "${VAR_NAME}" \
             --arg site_id "${NETLIFY_SITE_ID}" \
-            '{ $account_id, id: $var_id, key: $var_name, $site_id }')
+            '{ $account_id, $id, $key, $site_id }')
           echo "DELETE_ENV_DATA: ${DELETE_ENV_DATA}"
           netlify api deleteEnvVarValue --data "${DELETE_ENV_DATA}"
         done
