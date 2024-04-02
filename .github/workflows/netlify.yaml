@@ -74,20 +74,20 @@ jobs:
       run: |
         # Get the Netlify account_id and allowed_branches from the site configuration.
         GET_SITE_DATA=$(jq -n \
-          --arg site_id "$NETLIFY_SITE_ID" \
+          --arg site_id "${NETLIFY_SITE_ID}" \
           '{ $site_id }')
         NETLIFY_SITE_CONFIG=$(netlify api getSite --data "${GET_SITE_DATA}")
-        NETLIFY_ACCOUNT_ID=$(jq '.account_id' <<< ${NETLIFY_SITE_CONFIG})"
+        NETLIFY_ACCOUNT_ID=$(jq '.account_id' <<< ${NETLIFY_SITE_CONFIG})
         ALLOWED_BRANCHES=$(jq '.build_settings.allowed_branches' <<< ${NETLIFY_SITE_CONFIG})
         echo "Allowed Branches: ${ALLOWED_BRANCHES}"
 
-        #Remove current branch from the list of allowed branches.
+        # Remove current branch from the list of allowed branches.
         PRUNED_ALLOWED_BRANCHES=$(jq 'del(.[]|select(. == "$BRANCH_NAME"))' <<< "${ALLOWED_BRANCHES}")
 
         echo "Pruned Allowed Branches: ${PRUNED_ALLOWED_BRANCHES}"
         UPDATE_SITE_DATA=$(jq -n \
-          --arg site_id "$NETLIFY_SITE_ID" \
-          --arg pab "$PRUNED_ALLOWED_BRANCHES" \
+          --arg site_id "${NETLIFY_SITE_ID}" \
+          --arg pab "${PRUNED_ALLOWED_BRANCHES}" \
           '{ $site_id, body: { build_settings: { allowed_branches: $pab } } }')
         UPDATED_SITE_CONFIG=$(netlify api updateSite --data "${UPDATE_SITE_DATA}")
 
@@ -97,25 +97,25 @@ jobs:
           --arg site_id "$NETLIFY_SITE_ID" \
           '{ $account_id, $site_id, context_name: "branch" }')
         NETLIFY_ENV_VARS=$(netlify api getEnvVars --data "${GET_ENV_DATA}")
-        echo "NETLIFY_ENV_VARS: $NETLIFY_ENV_VARS"
+        echo "NETLIFY_ENV_VARS: ${NETLIFY_ENV_VARS}"
 
         # Select the variable ids that are associated with this branch.
         VAR_IDS_TO_DELETE=$(jq -c \
-          --arg bn "$BRANCH_NAME" \
+          --arg bn "${BRANCH_NAME}" \
           'to_entries[] | select(.value.values[].context_parameter==$bn) | [.value.key, .value.values[].id]' <<< "${NETLIFY_ENV_VARS}")
-        echo "VAR_IDS_TO_DELETE: $VAR_IDS_TO_DELETE"
+        echo "VAR_IDS_TO_DELETE: ${VAR_IDS_TO_DELETE}"
 
         # Iterate over those variables and delete them by their id.
-        for var in $VAR_IDS_TO_DELETE; do
+        for var in ${VAR_IDS_TO_DELETE}; do
           VAR_NAME=$(jq '.[0]' <<< $var)
           VAR_ID=$(jq '.[1]' <<< $var)
-          echo "Deleting $VAR_NAME with id: $VAR_ID"
+          echo "Deleting ${VAR_NAME} with id: ${VAR_ID}"
           DELETE_ENV_DATA=$(jq -n \
-            --arg account_id "$NETLIFY_ACCOUNT_ID" \
-            --arg var_id "$VAR_ID" \
-            --arg var_name "$VAR_NAME" \
-            --arg site_id "$NETLIFY_SITE_ID" \
+            --arg account_id "${NETLIFY_ACCOUNT_ID}" \
+            --arg var_id "${VAR_ID}" \
+            --arg var_name "${VAR_NAME}" \
+            --arg site_id "${NETLIFY_SITE_ID}" \
             '{ $account_id, id: $var_id, key: $var_name, $site_id }')
-          echo "DELETE_ENV_DATA: $DELETE_ENV_DATA"
+          echo "DELETE_ENV_DATA: ${DELETE_ENV_DATA}"
           netlify api deleteEnvVarValue --data "${DELETE_ENV_DATA}"
         done
