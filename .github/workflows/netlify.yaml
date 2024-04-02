@@ -82,9 +82,11 @@ jobs:
         echo "Allowed Branches: ${ALLOWED_BRANCHES}"
 
         # Remove current branch from the list of allowed branches.
-        PRUNED_ALLOWED_BRANCHES=$(jq 'del(.[]|select(. == "$BRANCH_NAME"))' <<< "${ALLOWED_BRANCHES}")
-
+        PRUNED_ALLOWED_BRANCHES=$(jq \
+          --arg bn "${BRANCH_NAME}" \
+          'del(.[]|select(. == $bn))' <<< "${ALLOWED_BRANCHES}")
         echo "Pruned Allowed Branches: ${PRUNED_ALLOWED_BRANCHES}"
+
         UPDATE_SITE_DATA=$(jq -n \
           --arg site_id "${NETLIFY_SITE_ID}" \
           --arg pab "${PRUNED_ALLOWED_BRANCHES}" \
