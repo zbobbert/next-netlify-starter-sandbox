@@ -56,6 +56,16 @@ jobs:
         # Add a branch-specific environment variable to Netlify.
         netlify env:set test_env_var neato --context $BRANCH_NAME
 
+    - name: Deploy to Netlify 📎
+      env:
+        BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        NETLIFY_ACCOUNT_ID: ${{ env.NETLIFY_ACCOUNT_ID }}
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      run: |
+        # Add a branch-specific Netlify deploy.
+        netlify deploy
+
   cleanup:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
