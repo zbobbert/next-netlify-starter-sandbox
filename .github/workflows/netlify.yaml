@@ -61,7 +61,7 @@ jobs:
           --arg key "test_env_var" \
           --arg value "neato" \
           '{ $account_id, $key, $site_id, body: { context: "branch", $context_parameter, $value } }')
-        UPDATED_ENV_DATA=netlify api setEnvVarValue --data "${SET_ENV_DATA}"
+        UPDATED_ENV_DATA=$(netlify api setEnvVarValue --data "${SET_ENV_DATA}")
 
         # Broken due to case-insensitivity: https://github.com/netlify/cli/issues/6494
         # netlify env:set test_env_var neato --context $BRANCH_NAME
