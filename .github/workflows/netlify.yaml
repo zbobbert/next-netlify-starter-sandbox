@@ -89,9 +89,8 @@ jobs:
         GET_ENV_DATA=$(jq -n \
           --arg account_id "$NETLIFY_ACCOUNT_ID" \
           --arg site_id "$NETLIFY_SITE_ID" \
-          '{ $account_id, $site_id, context_name: "$BRANCH_NAME" }')
+          '{ $account_id, $site_id }')
         NETLIFY_ENV_VARS=$(netlify api getEnvVars --data "${GET_ENV_DATA}")
-        echo "NETLIFY_ENV_VARS: ${NETLIFY_ENV_VARS}"
 
         # Select the variable ids that are associated with this branch.
         VAR_IDS_TO_DELETE=$(jq -c \
