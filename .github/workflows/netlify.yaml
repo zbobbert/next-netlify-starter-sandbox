@@ -95,13 +95,13 @@ jobs:
         # Select the variable ids that are associated with this branch.
         VAR_IDS_TO_DELETE=$(jq -c \
           --arg bn "${BRANCH_NAME}" \
-          'to_entries[] | select(.value.values[].context_parameter==$bn) | [.value.key, .value.values[].id]' <<< "${NETLIFY_ENV_VARS}")
+          '.[] | select(.values[] | .context_parameter? == $bn) | {key: .key, id: .values[] | select(.context_parameter == $bn).id}' <<< "${NETLIFY_ENV_VARS}")
         echo "VAR_IDS_TO_DELETE: ${VAR_IDS_TO_DELETE}"
 
         # Iterate over those variables and delete them by their id.
         echo "${VAR_IDS_TO_DELETE}" | while read var; do
-          VAR_NAME=$(jq '.[0]' <<< $var)
-          VAR_ID=$(jq '.[1]' <<< $var)
+          VAR_NAME=$(jq '.key' <<< $var)
+          VAR_ID=$(jq '.id' <<< $var)
           echo "Deleting ${VAR_NAME} with id: ${VAR_ID}"
           DELETE_ENV_DATA=$(jq -n \
             --arg account_id "${NETLIFY_ACCOUNT_ID}" \
