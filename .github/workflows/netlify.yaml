@@ -88,6 +88,7 @@ jobs:
         GET_SITE_DATA=$(jq -n \
           --arg site_id "$NETLIFY_SITE_ID" \
           '{ $site_id }')
+        echo "GET_SITE_DATA: ${GET_SITE_DATA}"
         NETLIFY_SITE_CONFIG=$(netlify api getSite --data "${GET_SITE_DATA}")
         NETLIFY_ACCOUNT_ID=$(jq '.account_id' <<< ${NETLIFY_SITE_CONFIG})
 
