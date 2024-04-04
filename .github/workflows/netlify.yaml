@@ -106,7 +106,7 @@ jobs:
           DELETE_ENV_DATA=$(jq -n \
             --argjson account_id "${NETLIFY_ACCOUNT_ID}" \
             --argjson id "${VAR_ID}" \
-            --argjson key "${VAR_NAME}" \
+            --arg key "${VAR_NAME}" \
             --arg site_id "${NETLIFY_SITE_ID}" \
             '{ $account_id, $id, $key, $site_id }')
           echo "DELETE_ENV_DATA: ${DELETE_ENV_DATA}"
