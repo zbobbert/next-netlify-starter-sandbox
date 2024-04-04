@@ -54,7 +54,17 @@ jobs:
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
         # Add a branch-specific environment variable to Netlify.
-        netlify env:set test_env_var neato --context $BRANCH_NAME
+        SET_ENV_DATA=$(jq -n \
+          --arg account_id "$NETLIFY_ACCOUNT_ID" \
+          --arg site_id "$NETLIFY_SITE_ID" \
+          --arg context_parameter "$BRANCH_NAME" \
+          --arg key "test_env_var" \
+          --arg value "neato" \
+          '{ $account_id, $key, $site_id, body: { context: "branch", $context_parameter, $value } }')
+        netlify api setEnvVarValue --data "${SET_ENV_DATA}"
+
+        # Broken due to case-insensitivity: https://github.com/netlify/cli/issues/6494
+        # netlify env:set test_env_var neato --context $BRANCH_NAME
 
     - name: Trigger a deploy to Netlify 📎
       env:
@@ -75,12 +85,42 @@ jobs:
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
         # Get the list of environment variables in Netlify.
-        VAR_IDS_TO_DELETE=$(netlify env:list --json --context $BRANCH_NAME)
+        GET_ENV_DATA=$(jq -n \
+          --arg account_id "$NETLIFY_ACCOUNT_ID" \
+          --arg site_id "$NETLIFY_SITE_ID" \
+          '{ $account_id, $site_id, context_name: "$BRANCH_NAME" }')
+        NETLIFY_ENV_VARS=$(netlify api getEnvVars --data "${GET_ENV_DATA}")
+        echo "NETLIFY_ENV_VARS: ${NETLIFY_ENV_VARS}"
+
+        # Select the variable ids that are associated with this branch.
+        VAR_IDS_TO_DELETE=$(jq -c \
+          --arg bn "${BRANCH_NAME}" \
+          'to_entries[] | select(.value.values[].context_parameter==$bn) | [.value.key, .value.values[].id]' <<< "${NETLIFY_ENV_VARS}")
+        echo "VAR_IDS_TO_DELETE: ${VAR_IDS_TO_DELETE}"
 
         # Iterate over those variables and delete them by their id.
-        jq -r 'keys[]' <<< "${VAR_IDS_TO_DELETE}" | while read VAR_NAME; do
-          netlify env:unset $VAR_NAME --context $BRANCH_NAME
+        echo "${VAR_IDS_TO_DELETE}" | while read var; do
+          VAR_NAME=$(jq '.[0]' <<< $var)
+          VAR_ID=$(jq '.[1]' <<< $var)
+          echo "Deleting ${VAR_NAME} with id: ${VAR_ID}"
+          DELETE_ENV_DATA=$(jq -n \
+            --arg account_id "${NETLIFY_ACCOUNT_ID}" \
+            --arg id "${VAR_ID}" \
+            --arg key "${VAR_NAME}" \
+            --arg site_id "${NETLIFY_SITE_ID}" \
+            '{ $account_id, $id, $key, $site_id }')
+          echo "DELETE_ENV_DATA: ${DELETE_ENV_DATA}"
+          netlify api deleteEnvVarValue --data "${DELETE_ENV_DATA}"
         done
+
+        # Broken due to case-insensitivity: https://github.com/netlify/cli/issues/6494
+        # # Get the list of environment variables in Netlify.
+        # VAR_IDS_TO_DELETE=$(netlify env:list --json --context $BRANCH_NAME)
+
+        # # Iterate over those variables and delete them by their id.
+        # jq -r 'keys[]' <<< "${VAR_IDS_TO_DELETE}" | while read VAR_NAME; do
+        #   netlify env:unset $VAR_NAME --context $BRANCH_NAME
+        # done
 
     - name: Delete branch from Netlify 🪓
       env:
