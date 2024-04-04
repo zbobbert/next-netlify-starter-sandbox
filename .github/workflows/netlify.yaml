@@ -105,7 +105,7 @@ jobs:
           VAR_ID=$(jq '.id' <<< "$var")
           echo "Deleting ${VAR_NAME} with id: ${VAR_ID}"
           DELETE_ENV_DATA=$(jq -n \
-            --argjson account_id "${NETLIFY_ACCOUNT_ID}" \
+            --arg account_id "${NETLIFY_ACCOUNT_ID}" \
             --arg id "${VAR_ID}" \
             --arg key "${VAR_NAME}" \
             --arg site_id "${NETLIFY_SITE_ID}" \
