@@ -81,17 +81,10 @@ jobs:
     - name: Delete branch env vars from Netlify 🗑
       env:
         BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        NETLIFY_ACCOUNT_ID: ${{ secrets.NETLIFY_ACCOUNT_ID }}
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
-        # Get the Netlify account_id and allowed_branches from the site configuration.
-        GET_SITE_DATA=$(jq -n \
-          --arg site_id "$NETLIFY_SITE_ID" \
-          '{ $site_id }')
-        echo "GET_SITE_DATA: ${GET_SITE_DATA}"
-        NETLIFY_SITE_CONFIG=$(netlify api getSite --data "${GET_SITE_DATA}")
-        NETLIFY_ACCOUNT_ID=$(jq '.account_id' <<< ${NETLIFY_SITE_CONFIG})
-
         # Get the list of environment variables in Netlify.
         GET_ENV_DATA=$(jq -n \
           --arg account_id "$NETLIFY_ACCOUNT_ID" \
