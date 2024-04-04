@@ -100,13 +100,14 @@ jobs:
 
         # Iterate over those variables and delete them by their id.
         echo "${VAR_IDS_TO_DELETE}" | while read var; do
+        echo "var: $var"
           VAR_NAME=$(jq '.key' <<< "$var")
           VAR_ID=$(jq '.id' <<< "$var")
           echo "Deleting ${VAR_NAME} with id: ${VAR_ID}"
           DELETE_ENV_DATA=$(jq -n \
             --argjson account_id "${NETLIFY_ACCOUNT_ID}" \
-            --argjson id "${VAR_ID}" \
-            --argjson key "${VAR_NAME}" \
+            --arg id "${VAR_ID}" \
+            --arg key "${VAR_NAME}" \
             --arg site_id "${NETLIFY_SITE_ID}" \
             '{ $account_id, $id, $key, $site_id }')
           echo "DELETE_ENV_DATA: ${DELETE_ENV_DATA}"
