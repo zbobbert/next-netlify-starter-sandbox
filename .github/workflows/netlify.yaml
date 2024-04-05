@@ -100,11 +100,15 @@ jobs:
         UPDATED_DEPLOY_DATA=$(netlify api listSiteDeploys --data "${DEPLOY_DATA}")
         echo "$UPDATED_DEPLOY_DATA"
 
-        DEPLOY_STATE=$(jq '.[].state' <<< $UPDATED_DEPLOY_DATA)
-        DEPLOY_ICON=$([ "$DEPLOY_STATE" == "ready" ] && echo "✅" || echo "❌")
+        DEPLOY_STATE=$(jq -r '.[].state' <<< $UPDATED_DEPLOY_DATA)
+        case "$DEPLOY_STATE" in
+          "ready") DEPLOY_ICON="✅" ;;
+          "error") DEPLOY_ICON="❌" ;;
+          *) DEPLOY_ICON="🔃" ;;
+        esac
         APP_NAME=$(jq '.[].name' <<< $UPDATED_DEPLOY_DATA)
-        LATEST_DEPLOY_LOG=$(jq '.[] | "\(.admin_url)/deploys/\(.id)"' <<< $UPDATED_DEPLOY_DATA)
-        DEPLOY_URL=$(jq '.[].deploy_ssl_url' <<< $UPDATED_DEPLOY_DATA)
+        LATEST_DEPLOY_LOG=$(jq -r '.[] | "\(.admin_url)/deploys/\(.id)"' <<< $UPDATED_DEPLOY_DATA)
+        DEPLOY_URL=$(jq -r '.[].deploy_ssl_url' <<< $UPDATED_DEPLOY_DATA)
         BRANCH_PREVIEW=$([ "$DEPLOY_STATE" == "error" ] && echo "" || echo "|<span aria-hidden="true">😎</span> Branch Preview | [${DEPLOY_URL}](${DEPLOY_URL}) |")
 
         comment_body="### <span aria-hidden="true">${DEPLOY_ICON}</span> Branch Deploy for *${APP_NAME}* ${DEPLOY_STATE}!
@@ -115,7 +119,7 @@ jobs:
           |<span aria-hidden="true">🔨</span> Latest commit | ${{ github.sha }} |
           |<span aria-hidden="true">🔍</span> Latest deploy log | ${LATEST_DEPLOY_LOG} |
           ${BRANCH_PREVIEW}
-          |:-:|------------------------|
+          | | |
           | REQUIRE_DB_BRANCH | $REQUIRE_DB_BRANCH |
           | REQUIRE_ANOTHER_DB_RESET | $REQUIRE_ANOTHER_DB_RESET |
           | LEDGER_BRANCH_EXISTS | $LEDGER_BRANCH_EXISTS |
@@ -127,7 +131,7 @@ jobs:
           | TICKETSOCKET_BRANCH_CREATED | $TICKETSOCKET_BRANCH_CREATED |
           | PAYMENT_BRANCH_CREATED | $PAYMENT_BRANCH_CREATED |
           | TICKETFLIP_BRANCH_CREATED | $TICKETFLIP_BRANCH_CREATED |
-          |:-:|------------------------|
+          | | |
           | GAIA_LEDGER_URL | $GAIA_LEDGER_URL |
           | GAIA_PAYMENT_URL | $GAIA_PAYMENT_URL |
           | GAIA_TICKETSOCKET_URL | $GAIA_TICKETSOCKET_URL |
