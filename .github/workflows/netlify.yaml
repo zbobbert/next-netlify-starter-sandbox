@@ -61,7 +61,7 @@ jobs:
           --arg key "test_env_var" \
           --arg value "neato" \
           '{ $account_id, $key, $site_id, body: { context: "branch", $context_parameter, $value } }')
-        netlify api setEnvVarValue --data "${SET_ENV_DATA}"
+        UPDATED_ENV_DATA=$(netlify api setEnvVarValue --data "${SET_ENV_DATA}")
 
         # Broken due to case-insensitivity: https://github.com/netlify/cli/issues/6494
         # netlify env:set test_env_var neato --context $BRANCH_NAME
@@ -72,7 +72,80 @@ jobs:
         NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
       run: |
         # Trigger a branch-specific Netlify deploy.
-        curl -s -X POST -d '{}' "$NETLIFY_BUILD_HOOK?trigger_branch=$BRANCH_NAME&trigger_title=Github+PR"
+        curl -s -X POST -d '{}' "$NETLIFY_BUILD_HOOK?trigger_branch=$BRANCH_NAME&trigger_title=Github+PR+${{ github.event.pull_request.number }}"
+
+    - name: Output useful KV to Github comment 💾
+      if: always()
+      continue-on-error: true
+      env:
+        BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REQUIRE_DB_BRANCH: ${{ vars.REQUIRE_DB_BRANCH }}
+        REQUIRE_ANOTHER_DB_RESET: ${{ vars.REQUIRE_ANOTHER_DB_RESET }}
+        LEDGER_BRANCH_EXISTS: ${{ vars.LEDGER_BRANCH_EXISTS }}
+        TICKETSOCKET_BRANCH_EXISTS: ${{ vars.TICKETSOCKET_BRANCH_EXISTS }}
+        PAYMENT_BRANCH_EXISTS: ${{ vars.PAYMENT_BRANCH_EXISTS }}
+        TICKETFLIP_BRANCH_EXISTS: ${{ vars.TICKETFLIP_BRANCH_EXISTS }}
+        REQUIRE_DB_RESET: ${{ vars.REQUIRE_DB_RESET }}
+        LEDGER_BRANCH_CREATED: ${{ vars.LEDGER_BRANCH_CREATED }}
+        TICKETSOCKET_BRANCH_CREATED: ${{ vars.TICKETSOCKET_BRANCH_CREATED }}
+        PAYMENT_BRANCH_CREATED: ${{ vars.PAYMENT_BRANCH_CREATED }}
+        TICKETFLIP_BRANCH_CREATED: ${{ vars.TICKETFLIP_BRANCH_CREATED }}
+      run: |
+        DEPLOY_DATA=$(jq -n \
+          --arg site_id "$NETLIFY_SITE_ID" \
+          --arg branch "$BRANCH_NAME" \
+          '{ $site_id, $branch, "per_page": 1 }')
+        UPDATED_DEPLOY_DATA=$(netlify api listSiteDeploys --data "${DEPLOY_DATA}")
+        echo "$UPDATED_DEPLOY_DATA"
+
+        DEPLOY_STATE=$(jq -r '.[].state' <<< $UPDATED_DEPLOY_DATA)
+        case "$DEPLOY_STATE" in
+          "ready") DEPLOY_ICON="✅" ;;
+          "error") DEPLOY_ICON="❌" ;;
+          *) DEPLOY_ICON="🔃" ;;
+        esac
+        APP_NAME=$(jq '.[].name' <<< $UPDATED_DEPLOY_DATA)
+        LATEST_DEPLOY_LOG=$(jq -r '.[] | "\(.admin_url)/deploys/\(.id)"' <<< $UPDATED_DEPLOY_DATA)
+        DEPLOY_URL=$(jq -r '.[].deploy_ssl_url' <<< $UPDATED_DEPLOY_DATA)
+        BRANCH_PREVIEW=$([ "$DEPLOY_STATE" == "error" ] && echo "" || echo "|<span aria-hidden="true">😎</span> Branch Preview | [${DEPLOY_URL}](${DEPLOY_URL}) |")
+
+        comment_body="### <span aria-hidden="true">${DEPLOY_ICON}</span> Branch Deploy for *${APP_NAME}* ${DEPLOY_STATE}!
+
+
+          |  Name | Link |
+          |:-:|------------------------|
+          |<span aria-hidden="true">🔨</span> Latest commit | ${{ github.sha }} |
+          |<span aria-hidden="true">🔍</span> Latest deploy log | ${LATEST_DEPLOY_LOG} |
+          ${BRANCH_PREVIEW}
+          | | |
+          | REQUIRE_DB_BRANCH | $REQUIRE_DB_BRANCH |
+          | REQUIRE_ANOTHER_DB_RESET | $REQUIRE_ANOTHER_DB_RESET |
+          | LEDGER_BRANCH_EXISTS | $LEDGER_BRANCH_EXISTS |
+          | TICKETSOCKET_BRANCH_EXISTS | $TICKETSOCKET_BRANCH_EXISTS |
+          | PAYMENT_BRANCH_EXISTS | $PAYMENT_BRANCH_EXISTS |
+          | TICKETFLIP_BRANCH_EXISTS | $TICKETFLIP_BRANCH_EXISTS |
+          | REQUIRE_DB_RESET | $REQUIRE_DB_RESET |
+          | LEDGER_BRANCH_CREATED | $LEDGER_BRANCH_CREATED |
+          | TICKETSOCKET_BRANCH_CREATED | $TICKETSOCKET_BRANCH_CREATED |
+          | PAYMENT_BRANCH_CREATED | $PAYMENT_BRANCH_CREATED |
+          | TICKETFLIP_BRANCH_CREATED | $TICKETFLIP_BRANCH_CREATED |
+          | | |
+          | GAIA_LEDGER_URL | $GAIA_LEDGER_URL |
+          | GAIA_PAYMENT_URL | $GAIA_PAYMENT_URL |
+          | GAIA_TICKETSOCKET_URL | $GAIA_TICKETSOCKET_URL |
+          ---"
+
+        # Find the ID of the existing comment
+        comment_id=$(gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments | jq -r '.[] | select(.user.login == "github-actions[bot]") | .id')
+
+        # Update or create the comment
+        if [ -n "$comment_id" ]; then
+            gh api -X PATCH repos/${{ github.repository }}/issues/comments/$comment_id -f body="$comment_body"
+        else
+            gh api -X POST repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments -f body="$comment_body"
+        fi
 
   cleanup:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -81,7 +154,7 @@ jobs:
     - name: Delete branch env vars from Netlify 🗑
       env:
         BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-        NETLIFY_ACCOUNT_ID: ${{ env.NETLIFY_ACCOUNT_ID }}
+        NETLIFY_ACCOUNT_ID: ${{ secrets.NETLIFY_ACCOUNT_ID }}
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       run: |
@@ -89,24 +162,23 @@ jobs:
         GET_ENV_DATA=$(jq -n \
           --arg account_id "$NETLIFY_ACCOUNT_ID" \
           --arg site_id "$NETLIFY_SITE_ID" \
-          '{ $account_id, $site_id, context_name: "$BRANCH_NAME" }')
+          '{ $account_id, $site_id }')
         NETLIFY_ENV_VARS=$(netlify api getEnvVars --data "${GET_ENV_DATA}")
-        echo "NETLIFY_ENV_VARS: ${NETLIFY_ENV_VARS}"
 
         # Select the variable ids that are associated with this branch.
         VAR_IDS_TO_DELETE=$(jq -c \
           --arg bn "${BRANCH_NAME}" \
-          'to_entries[] | select(.value.values[].context_parameter==$bn) | [.value.key, .value.values[].id]' <<< "${NETLIFY_ENV_VARS}")
+          '.[] | select(.values[] | .context_parameter? == $bn) | {key: .key, id: .values[] | select(.context_parameter == $bn).id}' <<< "${NETLIFY_ENV_VARS}")
         echo "VAR_IDS_TO_DELETE: ${VAR_IDS_TO_DELETE}"
 
         # Iterate over those variables and delete them by their id.
         echo "${VAR_IDS_TO_DELETE}" | while read var; do
-          VAR_NAME=$(jq '.[0]' <<< $var)
-          VAR_ID=$(jq '.[1]' <<< $var)
+          VAR_NAME=$(jq '.key' <<< "$var")
+          VAR_ID=$(jq '.id' <<< "$var")
           echo "Deleting ${VAR_NAME} with id: ${VAR_ID}"
           DELETE_ENV_DATA=$(jq -n \
             --arg account_id "${NETLIFY_ACCOUNT_ID}" \
-            --arg id "${VAR_ID}" \
+            --argjson id "${VAR_ID}" \
             --arg key "${VAR_NAME}" \
             --arg site_id "${NETLIFY_SITE_ID}" \
             '{ $account_id, $id, $key, $site_id }')
