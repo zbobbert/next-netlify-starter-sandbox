@@ -74,6 +74,73 @@ jobs:
         # Trigger a branch-specific Netlify deploy.
         curl -s -X POST -d '{}' "$NETLIFY_BUILD_HOOK?trigger_branch=$BRANCH_NAME&trigger_title=Github+PR"
 
+      - name: Output useful KV to Github comment 💾
+        if: always()
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REQUIRE_DB_BRANCH: ${{ vars.REQUIRE_DB_BRANCH }}
+          REQUIRE_ANOTHER_DB_RESET: ${{ vars.REQUIRE_ANOTHER_DB_RESET }}
+          LEDGER_BRANCH_EXISTS: ${{ vars.LEDGER_BRANCH_EXISTS }}
+          TICKETSOCKET_BRANCH_EXISTS: ${{ vars.TICKETSOCKET_BRANCH_EXISTS }}
+          PAYMENT_BRANCH_EXISTS: ${{ vars.PAYMENT_BRANCH_EXISTS }}
+          TICKETFLIP_BRANCH_EXISTS: ${{ vars.TICKETFLIP_BRANCH_EXISTS }}
+          REQUIRE_DB_RESET: ${{ vars.REQUIRE_DB_RESET }}
+          LEDGER_BRANCH_CREATED: ${{ vars.LEDGER_BRANCH_CREATED }}
+          TICKETSOCKET_BRANCH_CREATED: ${{ vars.TICKETSOCKET_BRANCH_CREATED }}
+          PAYMENT_BRANCH_CREATED: ${{ vars.PAYMENT_BRANCH_CREATED }}
+          TICKETFLIP_BRANCH_CREATED: ${{ vars.TICKETFLIP_BRANCH_CREATED }}
+        run: |
+          DEPLOY_DATA=$(jq -n \
+            --arg site_id "$NETLIFY_SITE_ID" \
+            --arg branch "$BRANCH_NAME" \
+            '{ $site_id, $branch, "per_page": 1 }')
+          UPDATED_DEPLOY_DATA=$(netlify api listSiteDeploys --data "${DEPLOY_DATA}")
+          echo "$UPDATED_DEPLOY_DATA"
+
+          DEPLOY_STATE=$(jq '.[].state' <<< $UPDATED_DEPLOY_DATA)
+          DEPLOY_ICON=$([ "$DEPLOY_STATE" == "ready" ] && echo "✅" || echo "❌")
+          APP_NAME=$(jq '.[].name' <<< $UPDATED_DEPLOY_DATA)
+          LATEST_DEPLOY_LOG=$(jq '.[] | "\(.admin_url)/deploys/\(.id)"' <<< $UPDATED_DEPLOY_DATA)
+          DEPLOY_URL=$(jq '.[].deploy_ssl_url' <<< $UPDATED_DEPLOY_DATA)
+          BRANCH_PREVIEW=$([ "$DEPLOY_STATE" == "error" ] && echo "" || echo "|<span aria-hidden="true">😎</span> Branch Preview | [${DEPLOY_URL}](${DEPLOY_URL}) |")
+
+          comment_body="### <span aria-hidden="true">${DEPLOY_ICON}</span> Branch Deploy for *${APP_NAME}* ${DEPLOY_STATE}!
+
+
+            |  Name | Link |
+            |:-:|------------------------|
+            |<span aria-hidden="true">🔨</span> Latest commit | ${{ github.sha }} |
+            |<span aria-hidden="true">🔍</span> Latest deploy log | ${LATEST_DEPLOY_LOG} |
+            ${BRANCH_PREVIEW}
+            |:-:|------------------------|
+            | REQUIRE_DB_BRANCH | $REQUIRE_DB_BRANCH |
+            | REQUIRE_ANOTHER_DB_RESET | $REQUIRE_ANOTHER_DB_RESET |
+            | LEDGER_BRANCH_EXISTS | $LEDGER_BRANCH_EXISTS |
+            | TICKETSOCKET_BRANCH_EXISTS | $TICKETSOCKET_BRANCH_EXISTS |
+            | PAYMENT_BRANCH_EXISTS | $PAYMENT_BRANCH_EXISTS |
+            | TICKETFLIP_BRANCH_EXISTS | $TICKETFLIP_BRANCH_EXISTS |
+            | REQUIRE_DB_RESET | $REQUIRE_DB_RESET |
+            | LEDGER_BRANCH_CREATED | $LEDGER_BRANCH_CREATED |
+            | TICKETSOCKET_BRANCH_CREATED | $TICKETSOCKET_BRANCH_CREATED |
+            | PAYMENT_BRANCH_CREATED | $PAYMENT_BRANCH_CREATED |
+            | TICKETFLIP_BRANCH_CREATED | $TICKETFLIP_BRANCH_CREATED |
+            |:-:|------------------------|
+            | GAIA_LEDGER_URL | $GAIA_LEDGER_URL |
+            | GAIA_PAYMENT_URL | $GAIA_PAYMENT_URL |
+            | GAIA_TICKETSOCKET_URL | $GAIA_TICKETSOCKET_URL |
+            ---"
+
+          # Find the ID of the existing comment
+          comment_id=$(gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments | jq -r '.[] | select(.user.login == "github-actions[bot]") | .id')
+
+          # Update or create the comment
+          if [ -n "$comment_id" ]; then
+              gh api -X PATCH repos/${{ github.repository }}/issues/comments/$comment_id -f body="$comment_body"
+          else
+              gh api -X POST repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments -f body="$comment_body"
+          fi
+
   cleanup:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
@@ -100,7 +167,6 @@ jobs:
 
         # Iterate over those variables and delete them by their id.
         echo "${VAR_IDS_TO_DELETE}" | while read var; do
-        echo "var: $var"
           VAR_NAME=$(jq '.key' <<< "$var")
           VAR_ID=$(jq '.id' <<< "$var")
           echo "Deleting ${VAR_NAME} with id: ${VAR_ID}"
