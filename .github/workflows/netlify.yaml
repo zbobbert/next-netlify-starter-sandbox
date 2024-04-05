@@ -78,6 +78,8 @@ jobs:
       if: always()
       continue-on-error: true
       env:
+        BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         REQUIRE_DB_BRANCH: ${{ vars.REQUIRE_DB_BRANCH }}
         REQUIRE_ANOTHER_DB_RESET: ${{ vars.REQUIRE_ANOTHER_DB_RESET }}
@@ -107,7 +109,7 @@ jobs:
 
         comment_body="### <span aria-hidden="true">${DEPLOY_ICON}</span> Branch Deploy for *${APP_NAME}* ${DEPLOY_STATE}!
 
-        
+
           |  Name | Link |
           |:-:|------------------------|
           |<span aria-hidden="true">🔨</span> Latest commit | ${{ github.sha }} |
