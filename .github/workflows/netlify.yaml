@@ -72,7 +72,7 @@ jobs:
         NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
       run: |
         # Trigger a branch-specific Netlify deploy.
-        curl -s -X POST -d '{}' "$NETLIFY_BUILD_HOOK?trigger_branch=$BRANCH_NAME&trigger_title=Github+PR"
+        curl -s -X POST -d '{}' "$NETLIFY_BUILD_HOOK?trigger_branch=$BRANCH_NAME&trigger_title=Github+PR+${{ github.event.pull_request.number }}"
 
     - name: Output useful KV to Github comment 💾
       if: always()
